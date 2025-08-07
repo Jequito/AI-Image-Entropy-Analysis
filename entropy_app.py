@@ -64,17 +64,56 @@ def main():
     tolerance = st.sidebar.slider("Entropy Tolerance", 0.01, 1.0, 0.1, 
                                  help="Maximum difference allowed between channel entropies")
     
-    # File uploader
-    uploaded_file = st.file_uploader(
-        "Choose an image file", 
-        type=['jpg', 'jpeg', 'png', 'bmp', 'tiff'],
-        help="Upload an image to analyze its entropy patterns"
+    # Image source selection
+    st.sidebar.header("Image Source")
+    image_source = st.sidebar.radio(
+        "Choose image source:",
+        ["Upload File", "Use Local File"]
     )
+    
+    image = None
+    
+    if image_source == "Upload File":
+        # File uploader
+        uploaded_file = st.file_uploader(
+            "Choose an image file", 
+            type=['jpg', 'jpeg', 'png', 'bmp', 'tiff'],
+            help="Upload an image to analyze its entropy patterns"
+        )
+        if image is not None:
+            image = Image.open(uploaded_file)
+    
+    else:  # Use Local File
+        # Local file path input
+        st.markdown("### 📁 Local File Mode")
+        default_path = st.text_input(
+            "Enter image file path:", 
+            value="image.jpg",
+            help="Enter the path to your local image file (e.g., 'image.jpg', 'path/to/image.png')"
+        )
+        
+        if st.button("Load Local Image") or default_path:
+            try:
+                # Step 1: Reading the Image (Original functionality)
+                image_array = io.imread(default_path)
+                
+                # Convert to PIL Image for consistency
+                if len(image_array.shape) == 2:  # Grayscale
+                    image = Image.fromarray(image_array, mode='L').convert('RGB')
+                elif image_array.shape[2] == 4:  # RGBA
+                    image = Image.fromarray(image_array, mode='RGBA').convert('RGB')
+                else:  # RGB
+                    image = Image.fromarray(image_array, mode='RGB')
+                    
+                st.success(f"✅ Successfully loaded: {default_path}")
+                
+            except Exception as e:
+                st.error(f"❌ Could not load image from '{default_path}': {str(e)}")
+                st.info("Make sure the file exists and is a valid image format.")
     
     if uploaded_file is not None:
         try:
-            # Load the image
-            image = Image.open(uploaded_file)
+            # Load the image (already loaded above based on source)
             
             # Display original image info
             st.subheader("📊 Image Information")
