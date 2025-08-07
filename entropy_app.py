@@ -63,66 +63,16 @@ def main():
     tolerance = st.sidebar.slider("Entropy Tolerance", 0.01, 1.0, 0.1, 
                                  help="Maximum difference allowed between channel entropies")
     
-    # Image source selection
-    st.sidebar.header("Image Source")
-    image_source = st.sidebar.radio(
-        "Choose image source:",
-        ["Upload File", "Use Local File"]
+    # File uploader
+    uploaded_file = st.file_uploader(
+        "Choose an image file", 
+        type=['jpg', 'jpeg', 'png', 'bmp', 'tiff'],
+        help="Upload an image to analyze its entropy patterns"
     )
     
     image = None
-    
-    if image_source == "Upload File":
-        # File uploader
-        uploaded_file = st.file_uploader(
-            "Choose an image file", 
-            type=['jpg', 'jpeg', 'png', 'bmp', 'tiff'],
-            help="Upload an image to analyze its entropy patterns"
-        )
-        if uploaded_file is not None:
-            image = Image.open(uploaded_file)
-    
-    else:  # Use Local File
-        # Local file path input
-        st.markdown("### 📁 Local File Mode")
-        default_path = st.text_input(
-            "Enter image file path:", 
-            value="image.jpg",
-            help="Enter the path to your local image file (e.g., 'image.jpg', 'path/to/image.png')"
-        )
-        
-        load_button = st.button("Load Local Image")
-        
-        if load_button and default_path.strip():
-            try:
-                # Step 1: Reading the Image (Original functionality)
-                image_array = io.imread(default_path.strip())
-                
-                # Convert to PIL Image for consistency
-                if len(image_array.shape) == 2:  # Grayscale
-                    image = Image.fromarray(image_array, mode='L').convert('RGB')
-                elif len(image_array.shape) == 3:
-                    if image_array.shape[2] == 4:  # RGBA
-                        image = Image.fromarray(image_array, mode='RGBA').convert('RGB')
-                    else:  # RGB
-                        image = Image.fromarray(image_array, mode='RGB')
-                else:
-                    st.error("Unsupported image format")
-                    image = None
-                    
-                if image is not None:
-                    st.success(f"✅ Successfully loaded: {default_path}")
-                
-            except FileNotFoundError:
-                st.error(f"❌ File not found: '{default_path}'")
-                st.info("Make sure the file path is correct and the file exists.")
-                image = None
-            except Exception as e:
-                st.error(f"❌ Could not load image from '{default_path}': {str(e)}")
-                st.info("Make sure the file exists and is a valid image format.")
-                image = None
-        elif load_button and not default_path.strip():
-            st.warning("⚠️ Please enter a file path first.")
+    if uploaded_file is not None:
+        image = Image.open(uploaded_file)
     
     if image is not None:
         try:
@@ -205,27 +155,27 @@ def main():
             st.info("Please try uploading a different image or adjusting the parameters.")
     
     else:
-        st.info("👆 Please upload an image or specify a local file path to get started!")
+        st.info("👆 Please upload an image to get started!")
+    
+    # Show sample explanation (always visible)
+    with st.expander("ℹ️ How does this work?"):
+        st.markdown("""
+        This tool performs the following steps:
         
-        # Show sample explanation
-        with st.expander("ℹ️ How does this work?"):
-            st.markdown("""
-            This tool performs the following steps:
-            
-            1. **Split Channels**: Separates your image into Red, Green, and Blue channels
-            2. **Calculate Entropy**: Computes local entropy for each channel using a sliding window
-            3. **Compare Entropies**: Finds pixels where all three channels have similar entropy values
-            4. **Highlight Results**: Marks matching pixels in red on the output image
-            
-            **Parameters:**
-            - **Neighborhood Radius**: Size of the area around each pixel used for entropy calculation
-            - **Entropy Tolerance**: How similar the entropy values need to be to be considered "matching"
-            
-            **Use Cases:**
-            - Detecting uniform or textured regions
-            - Image analysis and segmentation
-            - Quality assessment
-            """)
+        1. **Split Channels**: Separates your image into Red, Green, and Blue channels
+        2. **Calculate Entropy**: Computes local entropy for each channel using a sliding window
+        3. **Compare Entropies**: Finds pixels where all three channels have similar entropy values
+        4. **Highlight Results**: Marks matching pixels in red on the output image
+        
+        **Parameters:**
+        - **Neighborhood Radius**: Size of the area around each pixel used for entropy calculation
+        - **Entropy Tolerance**: How similar the entropy values need to be to be considered "matching"
+        
+        **Use Cases:**
+        - Detecting uniform or textured regions
+        - Image analysis and segmentation
+        - Quality assessment
+        """)
 
 if __name__ == "__main__":
     main()
