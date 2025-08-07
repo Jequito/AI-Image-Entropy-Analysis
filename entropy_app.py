@@ -1,6 +1,5 @@
 import streamlit as st
 import numpy as np
-import matplotlib.pyplot as plt
 from skimage import io, filters, img_as_ubyte
 from skimage.morphology import disk
 from PIL import Image
@@ -48,7 +47,7 @@ def process_image(image, radius=5, tolerance=0.1):
     highlighted_image = image_array.copy()
     highlighted_image[mask] = [255, 0, 0]  # Mark matching pixels in red
     
-    return image_array, highlighted_image, mask
+    return image_array, highlighted_image, mask, entropy_red, entropy_green, entropy_blue
 
 def main():
     st.title("🔍 Image Entropy Analysis Tool")
@@ -80,7 +79,7 @@ def main():
             type=['jpg', 'jpeg', 'png', 'bmp', 'tiff'],
             help="Upload an image to analyze its entropy patterns"
         )
-        if image is not None:
+        if uploaded_file is not None:
             image = Image.open(uploaded_file)
     
     else:  # Use Local File
@@ -92,28 +91,45 @@ def main():
             help="Enter the path to your local image file (e.g., 'image.jpg', 'path/to/image.png')"
         )
         
-        if st.button("Load Local Image") or default_path:
+        load_button = st.button("Load Local Image")
+        
+        if load_button and default_path.strip():
             try:
                 # Step 1: Reading the Image (Original functionality)
-                image_array = io.imread(default_path)
+                image_array = io.imread(default_path.strip())
                 
                 # Convert to PIL Image for consistency
                 if len(image_array.shape) == 2:  # Grayscale
                     image = Image.fromarray(image_array, mode='L').convert('RGB')
-                elif image_array.shape[2] == 4:  # RGBA
-                    image = Image.fromarray(image_array, mode='RGBA').convert('RGB')
-                else:  # RGB
-                    image = Image.fromarray(image_array, mode='RGB')
+                elif len(image_array.shape) == 3:
+                    if image_array.shape[2] == 4:  # RGBA
+                        image = Image.fromarray(image_array, mode='RGBA').convert('RGB')
+                    else:  # RGB
+                        image = Image.fromarray(image_array, mode='RGB')
+                else:
+                    st.error("Unsupported image format")
+                    image = None
                     
-                st.success(f"✅ Successfully loaded: {default_path}")
+                if image is not None:
+                    st.success(f"✅ Successfully loaded: {default_path}")
                 
+            except FileNotFoundError:
+                st.error(f"❌ File not found: '{default_path}'")
+                st.info("Make sure the file path is correct and the file exists.")
+                image = None
             except Exception as e:
                 st.error(f"❌ Could not load image from '{default_path}': {str(e)}")
                 st.info("Make sure the file exists and is a valid image format.")
+                image = None
+        elif load_button and not default_path.strip():
+            st.warning("⚠️ Please enter a file path first.")
     
-    if uploaded_file is not None:
+    if image is not None:
         try:
-            # Load the image (already loaded above based on source)
+            # Verify image is properly loaded
+            if not hasattr(image, 'width') or not hasattr(image, 'height'):
+                st.error("Invalid image object. Please try loading the image again.")
+                return
             
             # Display original image info
             st.subheader("📊 Image Information")
@@ -127,7 +143,7 @@ def main():
             
             # Process the image
             with st.spinner("Processing image... This may take a moment."):
-                original, highlighted, mask = process_image(image, radius, tolerance)
+                original, highlighted, mask, entropy_red, entropy_green, entropy_blue = process_image(image, radius, tolerance)
             
             # Display results
             st.subheader("🖼️ Results")
@@ -157,48 +173,39 @@ def main():
             with col3:
                 st.metric("Percentage Highlighted", f"{percentage:.2f}%")
             
-            # Optional: Show entropy visualization
+            # Show entropy heatmaps using Streamlit's native image display
             if st.checkbox("Show Entropy Heatmaps"):
                 st.subheader("🔥 Channel Entropy Heatmaps")
+                st.info("Entropy values are displayed as grayscale images (brighter = higher entropy)")
                 
-                # Calculate entropy for visualization
-                image_array = np.array(image)
-                if len(image_array.shape) == 3 and image_array.shape[2] == 4:
-                    image_array = image_array[:, :, :3]
-                elif len(image_array.shape) == 2:
-                    image_array = np.stack([image_array] * 3, axis=-1)
+                # Normalize entropy values to 0-255 for display
+                entropy_red_norm = ((entropy_red - entropy_red.min()) / (entropy_red.max() - entropy_red.min()) * 255).astype(np.uint8)
+                entropy_green_norm = ((entropy_green - entropy_green.min()) / (entropy_green.max() - entropy_green.min()) * 255).astype(np.uint8)
+                entropy_blue_norm = ((entropy_blue - entropy_blue.min()) / (entropy_blue.max() - entropy_blue.min()) * 255).astype(np.uint8)
                 
-                selem = disk(radius)
-                entropy_red = filters.rank.entropy(img_as_ubyte(image_array[:, :, 0]), selem)
-                entropy_green = filters.rank.entropy(img_as_ubyte(image_array[:, :, 1]), selem)
-                entropy_blue = filters.rank.entropy(img_as_ubyte(image_array[:, :, 2]), selem)
+                col1, col2, col3 = st.columns(3)
                 
-                fig, axes = plt.subplots(1, 3, figsize=(15, 5))
+                with col1:
+                    st.markdown("**Red Channel Entropy**")
+                    st.image(entropy_red_norm, use_column_width=True)
+                    st.caption(f"Min: {entropy_red.min():.2f}, Max: {entropy_red.max():.2f}")
                 
-                im1 = axes[0].imshow(entropy_red, cmap='hot')
-                axes[0].set_title('Red Channel Entropy')
-                axes[0].axis('off')
-                plt.colorbar(im1, ax=axes[0])
+                with col2:
+                    st.markdown("**Green Channel Entropy**")
+                    st.image(entropy_green_norm, use_column_width=True)
+                    st.caption(f"Min: {entropy_green.min():.2f}, Max: {entropy_green.max():.2f}")
                 
-                im2 = axes[1].imshow(entropy_green, cmap='hot')
-                axes[1].set_title('Green Channel Entropy')
-                axes[1].axis('off')
-                plt.colorbar(im2, ax=axes[1])
-                
-                im3 = axes[2].imshow(entropy_blue, cmap='hot')
-                axes[2].set_title('Blue Channel Entropy')
-                axes[2].axis('off')
-                plt.colorbar(im3, ax=axes[2])
-                
-                plt.tight_layout()
-                st.pyplot(fig)
+                with col3:
+                    st.markdown("**Blue Channel Entropy**")
+                    st.image(entropy_blue_norm, use_column_width=True)
+                    st.caption(f"Min: {entropy_blue.min():.2f}, Max: {entropy_blue.max():.2f}")
             
         except Exception as e:
             st.error(f"An error occurred while processing the image: {str(e)}")
             st.info("Please try uploading a different image or adjusting the parameters.")
     
     else:
-        st.info("👆 Please upload an image to get started!")
+        st.info("👆 Please upload an image or specify a local file path to get started!")
         
         # Show sample explanation
         with st.expander("ℹ️ How does this work?"):
