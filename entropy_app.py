@@ -175,6 +175,11 @@ def main():
         - Detecting uniform or textured regions
         - Image analysis and segmentation
         - Quality assessment
+        - AI-generated image detection
+        
+        **Source:**
+        This implementation is based on the entropy analysis method described in:
+        [Detecting AI Generated Images Using Entropy Analysis](https://blog.frohrer.com/detecting-ai-generated-images-using-entropy-analysis/)
         """)
 
 if __name__ == "__main__":
