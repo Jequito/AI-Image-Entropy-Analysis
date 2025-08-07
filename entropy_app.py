@@ -153,11 +153,11 @@ def main():
             
             with col1:
                 st.markdown("**Original Image**")
-                st.image(original, use_column_width=True)
+                st.image(original, use_container_width=True)
             
             with col2:
                 st.markdown("**Highlighted Image**")
-                st.image(highlighted, use_column_width=True)
+                st.image(highlighted, use_container_width=True)
             
             # Statistics
             st.subheader("📈 Analysis Statistics")
@@ -187,17 +187,17 @@ def main():
                 
                 with col1:
                     st.markdown("**Red Channel Entropy**")
-                    st.image(entropy_red_norm, use_column_width=True)
+                    st.image(entropy_red_norm, use_container_width=True)
                     st.caption(f"Min: {entropy_red.min():.2f}, Max: {entropy_red.max():.2f}")
                 
                 with col2:
                     st.markdown("**Green Channel Entropy**")
-                    st.image(entropy_green_norm, use_column_width=True)
+                    st.image(entropy_green_norm, use_container_width=True)
                     st.caption(f"Min: {entropy_green.min():.2f}, Max: {entropy_green.max():.2f}")
                 
                 with col3:
                     st.markdown("**Blue Channel Entropy**")
-                    st.image(entropy_blue_norm, use_column_width=True)
+                    st.image(entropy_blue_norm, use_container_width=True)
                     st.caption(f"Min: {entropy_blue.min():.2f}, Max: {entropy_blue.max():.2f}")
             
         except Exception as e:
